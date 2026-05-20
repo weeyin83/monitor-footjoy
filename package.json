@@ -1,0 +1,16 @@
+{
+  "name": "monitor-footjoy",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Monitors the FootJoy UK shoe fitting events schedule and opens a GitHub issue when new events appear.",
+  "scripts": {
+    "start": "node scripts/monitor-footjoy.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "playwright": "^1.47.0"
+  }
+}

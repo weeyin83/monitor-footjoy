@@ -1,6 +1,7 @@
 import fs from "node:fs/promises";
 import { appendFileSync } from "node:fs";
 import path from "node:path";
+import { chromium } from "playwright";
 
 const URL = "https://footjoyukshoefittingevents.as.me/schedule/aa876a03";
 const STATE_DIR = ".monitor";
@@ -10,17 +11,6 @@ const MONTHS = [
   "January","February","March","April","May","June",
   "July","August","September","October","November","December"
 ];
-
-function stripTags(html) {
-  return html
-    .replace(/<script[\s\S]*?<\/script>/gi, " ")
-    .replace(/<style[\s\S]*?<\/style>/gi, " ")
-    .replace(/<[^>]+>/g, " ")
-    .replace(/&nbsp;/g, " ")
-    .replace(/&amp;/g, "&")
-    .replace(/\s+/g, " ")
-    .trim();
-}
 
 function extractEvents(text) {
   // Looks for lines like:
@@ -79,37 +69,62 @@ function isScottishEvent(event) {
   return !!m && SCOTTISH_PREFIXES.has(m[1]);
 }
 
-async function main() {
-  const res = await fetch(URL, {
-    headers: {
-      // Use a realistic browser UA: Acuity Scheduling returns a stripped
-      // page (no events) when it sees an obvious bot UA from cloud IPs.
-      "user-agent":
+async function fetchRenderedText() {
+  const browser = await chromium.launch();
+  try {
+    const context = await browser.newContext({
+      userAgent:
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +
         "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-      accept:
-        "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif," +
-        "image/webp,image/apng,*/*;q=0.8",
-      "accept-language": "en-GB,en;q=0.9",
-      "cache-control": "no-cache",
-      pragma: "no-cache"
+      locale: "en-GB"
+    });
+    const page = await context.newPage();
+    const response = await page.goto(URL, {
+      waitUntil: "domcontentloaded",
+      timeout: 45000
+    });
+
+    if (!response || !response.ok()) {
+      throw new Error(
+        `Fetch failed: ${response ? response.status() : "no response"}`
+      );
     }
-  });
 
-  if (!res.ok) {
-    throw new Error(`Fetch failed: ${res.status} ${res.statusText}`);
+    // Wait for the schedule UI to render at least one event line.
+    // Acuity event rows always contain a UK postcode; wait for that pattern.
+    await page
+      .waitForFunction(
+        () =>
+          /[A-Z]{1,2}\d[A-Z\d]?\s*\d[A-Z]{2}/.test(
+            document.body.innerText || ""
+          ),
+        null,
+        { timeout: 30000 }
+      )
+      .catch(() => {
+        // fall through – we'll diagnose below if nothing parses
+      });
+
+    const status = response.status();
+    const text = (await page.evaluate(() => document.body.innerText || "")).replace(
+      /\s+/g,
+      " "
+    ).trim();
+    return { status, text };
+  } finally {
+    await browser.close();
   }
+}
 
-  const html = await res.text();
-  const text = stripTags(html);
+async function main() {
+  const { status, text } = await fetchRenderedText();
   const currentEvents = extractEvents(text);
 
   if (currentEvents.length === 0) {
     console.error("=== Parse diagnostics ===");
-    console.error(`HTTP status:       ${res.status}`);
-    console.error(`Raw HTML length:   ${html.length}`);
-    console.error(`Stripped length:   ${text.length}`);
-    console.error(`First 800 chars of stripped text:`);
+    console.error(`HTTP status:       ${status}`);
+    console.error(`Rendered length:   ${text.length}`);
+    console.error(`First 800 chars of rendered text:`);
     console.error(text.slice(0, 800));
     throw new Error("No events parsed. Page structure may have changed.");
   }
