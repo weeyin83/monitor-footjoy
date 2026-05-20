@@ -18,7 +18,13 @@ The [Monitor FootJoy Events workflow](.github/workflows/monitor-footjoy.yml) run
 - labelled `footjoy-event` so you can filter notifications in your inbox, and
 - assigned to the repo owner so GitHub always sends an email (no SMTP server needed).
 
-Create the `footjoy-event` label once in **Issues → Labels** if you want it to have a custom colour; otherwise it will be auto-created the first time an issue is opened.
+If any of the new events are at a Scottish postcode (areas `AB, DD, DG, EH, FK, G, HS, IV, KA, KW, KY, ML, PA, PH, TD, ZE`), the same issue is enhanced rather than duplicated:
+
+- a 🏴󠁧󠁢󠁳󠁣󠁴󠁿 flag and `(N Scottish)` suffix are added to the issue title for easy inbox filtering,
+- a dedicated `### 🏴󠁧󠁢󠁳󠁣󠁴󠁿 New Scottish events` section is added to the issue body, and
+- the issue also gets the `footjoy-event-scotland` label.
+
+Create the `footjoy-event` and `footjoy-event-scotland` labels once in **Issues → Labels** if you want custom colours; otherwise they will be auto-created the first time an issue is opened.
 
 Event outputs are passed into the issue-creation step via environment variables rather than templated into the inline JavaScript, so unusual characters in venue names cannot break or inject into the script.
 

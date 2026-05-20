@@ -42,30 +42,55 @@ jobs:
         env:
           NEW_COUNT: ${{ steps.monitor.outputs.new_count }}
           NEW_EVENTS: ${{ steps.monitor.outputs.new_events }}
+          HAS_SCOTLAND: ${{ steps.monitor.outputs.has_scotland }}
+          SCOTLAND_COUNT: ${{ steps.monitor.outputs.scotland_count }}
+          SCOTLAND_EVENTS: ${{ steps.monitor.outputs.scotland_events }}
         with:
           script: |
             const count = process.env.NEW_COUNT;
             const events = process.env.NEW_EVENTS;
+            const hasScotland = process.env.HAS_SCOTLAND === 'true';
+            const scotlandCount = process.env.SCOTLAND_COUNT;
+            const scotlandEvents = process.env.SCOTLAND_EVENTS;
 
-            const title = `FootJoy monitor: ${count} new event(s) - ${new Date().toISOString().slice(0, 16)} UTC`;
-            const body = [
+            const flag = hasScotland ? '\uD83C\uDFF4\uDB40\uDC67\uDB40\uDC62\uDB40\uDC73\uDB40\uDC63\uDB40\uDC74\uDB40\uDC7F ' : '';
+            const scotlandSuffix = hasScotland ? ` (${scotlandCount} Scottish)` : '';
+            const title = `${flag}FootJoy monitor: ${count} new event(s)${scotlandSuffix} - ${new Date().toISOString().slice(0, 16)} UTC`;
+
+            const bodyParts = [
               'New FootJoy shoe fitting events were added.',
               '',
               `Detected by workflow run: ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
               '',
-              `New events count: ${count}`,
+              `New events count: ${count}`
+            ];
+
+            if (hasScotland) {
+              bodyParts.push(
+                '',
+                `### \uD83C\uDFF4\uDB40\uDC67\uDB40\uDC62\uDB40\uDC73\uDB40\uDC63\uDB40\uDC74\uDB40\uDC7F New Scottish events (${scotlandCount})`,
+                '```text',
+                scotlandEvents,
+                '```'
+              );
+            }
+
+            bodyParts.push(
               '',
-              '### New events',
+              '### All new events',
               '```text',
               events,
               '```'
-            ].join('\n');
+            );
+
+            const labels = ['footjoy-event'];
+            if (hasScotland) labels.push('footjoy-event-scotland');
 
             await github.rest.issues.create({
               owner: context.repo.owner,
               repo: context.repo.repo,
               title,
-              body,
-              labels: ['footjoy-event'],
+              body: bodyParts.join('\n'),
+              labels,
               assignees: [context.repo.owner]
             });

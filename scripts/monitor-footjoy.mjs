@@ -68,6 +68,17 @@ function setOutput(name, value) {
   appendFileSync(outPath, block);
 }
 
+// Scottish postcode area prefixes. TD straddles the border but is
+// predominantly Scottish, so we treat all TD as Scotland for simplicity.
+const SCOTTISH_PREFIXES = new Set([
+  "AB","DD","DG","EH","FK","G","HS","IV","KA","KW","KY","ML","PA","PH","TD","ZE"
+]);
+
+function isScottishEvent(event) {
+  const m = event.match(/\b([A-Z]{1,2})\d[A-Z\d]?\s*\d[A-Z]{2}\b/);
+  return !!m && SCOTTISH_PREFIXES.has(m[1]);
+}
+
 async function main() {
   const res = await fetch(URL, {
     headers: {
@@ -99,14 +110,21 @@ async function main() {
   const firstRun = previousEvents.length === 0;
   const changed = !firstRun && newEvents.length > 0;
 
+  const newScotlandEvents = newEvents.filter(isScottishEvent);
+  const hasScotland = changed && newScotlandEvents.length > 0;
+
+  const flag = hasScotland ? "\uD83C\uDFF4\uDB40\uDC67\uDB40\uDC62\uDB40\uDC73\uDB40\uDC63\uDB40\uDC74\uDB40\uDC7F " : "";
   const subject = changed
-    ? `FootJoy monitor: ${newEvents.length} new event(s)`
+    ? `${flag}FootJoy monitor: ${newEvents.length} new event(s)${hasScotland ? ` (${newScotlandEvents.length} Scottish)` : ""}`
     : "FootJoy monitor: no new events";
 
   setOutput("changed", changed ? "true" : "false");
   setOutput("new_count", String(newEvents.length));
   setOutput("subject", subject);
   setOutput("new_events", newEvents.join("\n"));
+  setOutput("has_scotland", hasScotland ? "true" : "false");
+  setOutput("scotland_count", String(newScotlandEvents.length));
+  setOutput("scotland_events", newScotlandEvents.join("\n"));
 }
 
 main().catch((err) => {
