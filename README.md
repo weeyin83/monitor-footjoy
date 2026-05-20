@@ -8,10 +8,10 @@ It runs on a schedule via GitHub Actions, keeps a JSON snapshot of the last-seen
 
 [scripts/monitor-footjoy.mjs](scripts/monitor-footjoy.mjs):
 
-1. Fetches the FootJoy schedule page.
-2. Strips HTML and extracts event lines matching the pattern `Month Day(st/nd/rd/th) - Venue - UK Postcode` (e.g. `June 10th - Kilnwick Percy Golf Club - YO42 1UF`).
+1. Launches a headless Chromium browser via [Playwright](https://playwright.dev/) and loads the FootJoy schedule page. The page is a JavaScript-rendered Acuity Scheduling app, so a plain `fetch` returns an empty shell with no events — a real browser is required.
+2. Waits until at least one UK postcode appears in the rendered text, then extracts event lines matching the pattern `Month Day(st/nd/rd/th) - Venue - UK Postcode` (e.g. `June 10th - Kilnwick Percy Golf Club - YO42 1UF`).
 3. Compares the extracted list against the previous snapshot at `.monitor/footjoy-events.json`.
-4. Writes the refreshed snapshot back to disk and emits GitHub Actions outputs (`changed`, `new_count`, `subject`, `new_events`).
+4. Writes the refreshed snapshot back to disk and emits GitHub Actions outputs (`changed`, `new_count`, `subject`, `new_events`, `has_scotland`, `scotland_count`, `scotland_events`).
 
 The [Monitor FootJoy Events workflow](.github/workflows/monitor-footjoy.yml) runs the script daily, commits any changes to the snapshot file, and opens an issue listing the new events when `changed == 'true'`. Each issue is:
 
@@ -30,16 +30,20 @@ Event outputs are passed into the issue-creation step via environment variables 
 
 ## Requirements
 
-- Node.js 20 or newer (uses built-in `fetch` and `node:fs/promises`).
-- No npm dependencies.
+- Node.js 20 or newer.
+- [Playwright](https://playwright.dev/) (installed via `npm install`) plus the Chromium browser it ships with.
 
 A [dev container](.devcontainer/devcontainer.json) is included if you want a ready-to-go environment in VS Code or GitHub Codespaces.
 
 ## Running locally
 
 ```bash
-node scripts/monitor-footjoy.mjs
+npm install
+npx playwright install chromium
+npm start
 ```
+
+On Linux you may also need `npx playwright install --with-deps chromium` (the `--with-deps` flag pulls in system libraries via `apt`). On Windows and macOS the plain `npx playwright install chromium` is enough.
 
 On the first run the snapshot is created and no alert is emitted (the baseline is just being established). Subsequent runs report only newly added events.
 
@@ -52,6 +56,7 @@ To reset the baseline, delete `.monitor/footjoy-events.json` and run the script 
 .github/workflows/    Scheduled GitHub Actions workflow
 .monitor/             Persisted event snapshot (created on first run)
 scripts/              The monitor script
+package.json          Node project manifest (Playwright dependency)
 ```
 
 ## License
