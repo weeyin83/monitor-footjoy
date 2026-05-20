@@ -13,7 +13,14 @@ It runs on a schedule via GitHub Actions, keeps a JSON snapshot of the last-seen
 3. Compares the extracted list against the previous snapshot at `.monitor/footjoy-events.json`.
 4. Writes the refreshed snapshot back to disk and emits GitHub Actions outputs (`changed`, `new_count`, `subject`, `new_events`).
 
-The [Monitor FootJoy Events workflow](.github/workflows/monitor-footjoy.yml) runs the script daily, commits any changes to the snapshot file, and opens an issue listing the new events when `changed == 'true'`.
+The [Monitor FootJoy Events workflow](.github/workflows/monitor-footjoy.yml) runs the script daily, commits any changes to the snapshot file, and opens an issue listing the new events when `changed == 'true'`. Each issue is:
+
+- labelled `footjoy-event` so you can filter notifications in your inbox, and
+- assigned to the repo owner so GitHub always sends an email (no SMTP server needed).
+
+Create the `footjoy-event` label once in **Issues → Labels** if you want it to have a custom colour; otherwise it will be auto-created the first time an issue is opened.
+
+Event outputs are passed into the issue-creation step via environment variables rather than templated into the inline JavaScript, so unusual characters in venue names cannot break or inject into the script.
 
 ## Requirements
 

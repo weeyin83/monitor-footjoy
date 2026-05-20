@@ -39,10 +39,13 @@ jobs:
       - name: Create GitHub issue for new events
         if: steps.monitor.outputs.changed == 'true'
         uses: actions/github-script@v7
+        env:
+          NEW_COUNT: ${{ steps.monitor.outputs.new_count }}
+          NEW_EVENTS: ${{ steps.monitor.outputs.new_events }}
         with:
           script: |
-            const count = `${{ toJSON(steps.monitor.outputs.new_count) }}`;
-            const events = `${{ toJSON(steps.monitor.outputs.new_events) }}`;
+            const count = process.env.NEW_COUNT;
+            const events = process.env.NEW_EVENTS;
 
             const title = `FootJoy monitor: ${count} new event(s) - ${new Date().toISOString().slice(0, 16)} UTC`;
             const body = [
@@ -62,5 +65,7 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               title,
-              body
+              body,
+              labels: ['footjoy-event'],
+              assignees: [context.repo.owner]
             });
