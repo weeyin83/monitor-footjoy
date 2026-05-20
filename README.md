@@ -13,7 +13,7 @@ It runs on a schedule via GitHub Actions, keeps a JSON snapshot of the last-seen
 3. Compares the extracted list against the previous snapshot at `.monitor/footjoy-events.json`.
 4. Writes the refreshed snapshot back to disk and emits GitHub Actions outputs (`changed`, `new_count`, `subject`, `new_events`, `has_scotland`, `scotland_count`, `scotland_events`).
 
-The [Monitor FootJoy Events workflow](.github/workflows/monitor-footjoy.yml) runs the script daily, commits any changes to the snapshot file, and opens an issue listing the new events when `changed == 'true'`. Each issue is:
+The [Monitor FootJoy Events workflow](.github/workflows/monitor-footjoy.yml) runs the script daily, commits the snapshot file back to the repo on every successful run (so the baseline persists and the diff stays accurate), and opens an issue listing the new events when `changed == 'true'`. Each issue is:
 
 - labelled `footjoy-event` so you can filter notifications in your inbox, and
 - assigned to the repo owner so GitHub always sends an email (no SMTP server needed).
@@ -48,6 +48,16 @@ On Linux you may also need `npx playwright install --with-deps chromium` (the `-
 On the first run the snapshot is created and no alert is emitted (the baseline is just being established). Subsequent runs report only newly added events.
 
 To reset the baseline, delete `.monitor/footjoy-events.json` and run the script again.
+
+## Getting the email notifications
+
+Issues are assigned to the repo owner, so GitHub will email assignees regardless of repo watch settings. For this to actually reach your inbox:
+
+1. Make sure email is enabled at <https://github.com/settings/notifications> under **Subscriptions → Watching** and **Participating, @mentions, and custom**.
+2. On the repo page, set **Watch → Participating and @mentions** (or higher).
+3. Add a Gmail/Outlook filter on `from:notifications@github.com subject:"[weeyin83/monitor-footjoy]"` to label / star / un-spam the alerts. For high-priority Scottish events, filter on the `(N Scottish)` suffix or the `🏴󠁧󠁢󠁳󠁣󠁴󠁿` flag in the subject.
+
+To confirm the path works without waiting for FootJoy to add an event, open a test issue manually and assign yourself — if that email arrives, the workflow's auto-created issues will too.
 
 ## Repository layout
 
