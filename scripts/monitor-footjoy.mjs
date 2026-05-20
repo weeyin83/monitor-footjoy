@@ -82,7 +82,17 @@ function isScottishEvent(event) {
 async function main() {
   const res = await fetch(URL, {
     headers: {
-      "user-agent": "Mozilla/5.0 (GitHub Actions monitor)"
+      // Use a realistic browser UA: Acuity Scheduling returns a stripped
+      // page (no events) when it sees an obvious bot UA from cloud IPs.
+      "user-agent":
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +
+        "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+      accept:
+        "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif," +
+        "image/webp,image/apng,*/*;q=0.8",
+      "accept-language": "en-GB,en;q=0.9",
+      "cache-control": "no-cache",
+      pragma: "no-cache"
     }
   });
 
@@ -95,6 +105,12 @@ async function main() {
   const currentEvents = extractEvents(text);
 
   if (currentEvents.length === 0) {
+    console.error("=== Parse diagnostics ===");
+    console.error(`HTTP status:       ${res.status}`);
+    console.error(`Raw HTML length:   ${html.length}`);
+    console.error(`Stripped length:   ${text.length}`);
+    console.error(`First 800 chars of stripped text:`);
+    console.error(text.slice(0, 800));
     throw new Error("No events parsed. Page structure may have changed.");
   }
 
