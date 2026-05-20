@@ -103,6 +103,5 @@ jobs:
               repo: context.repo.repo,
               title,
               body: bodyParts.join('\n'),
-              labels,
-              assignees: [context.repo.owner]
+              labels
             });
