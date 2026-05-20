@@ -35,13 +35,18 @@ jobs:
         run: node scripts/monitor-footjoy.mjs
 
       - name: Commit updated state
-        if: steps.monitor.outputs.changed == 'true'
+        if: always() && steps.monitor.outcome == 'success'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add .monitor/footjoy-events.json
-          git commit -m "chore: update FootJoy event snapshot" || echo "No commit needed"
-          git push
+          if git diff --cached --quiet; then
+            echo "No snapshot changes to commit."
+          else
+            git commit -m "chore: update FootJoy event snapshot"
+            git pull --rebase
+            git push
+          fi
 
       - name: Create GitHub issue for new events
         if: steps.monitor.outputs.changed == 'true'
